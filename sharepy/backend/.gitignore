@@ -1,0 +1,11 @@
+.env
+.env.local
+.env.*.local
+*.pyc
+__pycache__/
+.git/
+*.db
+backup.*
+*.bak
+.DS_Store
+uploads/
