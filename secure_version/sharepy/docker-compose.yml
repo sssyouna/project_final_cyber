@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # ✅ FIX M12: No exposed ports, internal network only
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: sharepy_user  # ✅ Not 'admin'
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # From secure .env
+      POSTGRES_DB: sharepy
+    # ✅ NO ports exposed!
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  # ✅ FIX M5: Adminer removed OR protected behind VPN
+  # adminer: - REMOVED from production!
+
+  # ✅ FIX M6 & M12: MinIO with strong credentials, not exposed
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    # ✅ NO ports exposed publicly!
+    volumes:
+      - minio_data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+    depends_on:
+      - postgres
+      - minio
+    networks:
+      - internal
+    restart: unless-stopped
+    # ✅ FIX M13: Proper volume permissions (handled in Dockerfile)
+
+  # ✅ FIX M3, M8, M11: Hardened Nginx
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.secure
+    ports:
+      - "443:443"  # HTTPS only
+      - "80:80"    # Redirect to HTTPS
+    depends_on:
+      - backend
+    volumes:
+      - ./nginx/ssl:/etc/nginx/ssl:ro  # SSL certificates
+    networks:
+      - internal
+      - external
+    restart: unless-stopped
+
+networks:
+  internal:
+    internal: true  # ✅ No external access
+  external:
+
+volumes:
+  postgres_data:
+  minio_data:
