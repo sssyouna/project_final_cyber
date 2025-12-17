@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # M12: Internal ports exposed publicly
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: sharepy
+    ports:
+      - "5432:5432"  # M12: EXPOSED!
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # M5 & M12: Adminer exposed without auth
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"  # M5: PUBLIC ACCESS!
+    depends_on:
+      - postgres
+
+  # M6 & M12: MinIO with default credentials and exposed port
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"  # M12: EXPOSED!
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./backend/uploads:/app/uploads  # M13: Will chmod 777
+    environment:
+      - DATABASE_URL=postgresql://admin:admin123@postgres:5432/sharepy
+    depends_on:
+      - postgres
+      - minio
+    # M10: Default FastAPI banner with version
+
+  # M3, M8, M11: Misconfigured Nginx
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    volumes:
+      - ./backend/uploads:/usr/share/nginx/html/uploads
+      - ./backend/.env:/usr/share/nginx/html/.env  # M4: EXPOSED!
+      - ./backend/.git:/usr/share/nginx/html/.git  # M4: EXPOSED!
+
+volumes:
+  postgres_data:
+  minio_data:

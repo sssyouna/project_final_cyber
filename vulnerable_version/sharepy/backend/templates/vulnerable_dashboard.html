@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SharePy Vulnerable Dashboard</title>
+    <style>
+        :root {
+            --primary: #dc2626;
+            --secondary: #4b5563;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --light: #f9fafb;
+            --dark: #1f2937;
+            --border: #e5e7eb;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #fef2f2;
+            color: #374151;
+            line-height: 1.6;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary), #991b1b);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .logo-icon {
+            font-size: 2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .dashboard-title {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .dashboard-title h1 {
+            font-size: 2.5rem;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+        
+        .dashboard-title p {
+            font-size: 1.1rem;
+            color: var(--secondary);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .warning-banner {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .warning-icon {
+            font-size: 1.5rem;
+            color: var(--danger);
+        }
+        
+        .warning-content h3 {
+            color: var(--danger);
+            margin-bottom: 0.5rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            transition: transform 0.3s ease;
+            border: 1px solid #fecaca;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+            color: var(--secondary);
+        }
+        
+        .vulnerabilities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .vulnerability-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            border: 1px solid #fecaca;
+        }
+        
+        .vulnerability-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .vulnerability-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .vulnerability-id {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .vulnerability-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+        
+        .vulnerability-severity {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .severity-high {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+        
+        .severity-medium {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+        
+        .severity-low {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+        
+        .vulnerability-body {
+            padding: 1.25rem;
+        }
+        
+        .vulnerability-description {
+            color: var(--secondary);
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+        
+        .exploit-section {
+            background: #fff7f7;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .exploit-title {
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .exploit-form {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .form-group label {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        .form-control {
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 0.9rem;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #991b1b;
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--secondary);
+        }
+        
+        .btn-outline:hover {
+            background: var(--light);
+        }
+        
+        .result-section {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 6px;
+            background: #fff7f7;
+            border-left: 4px solid var(--danger);
+            display: none;
+        }
+        
+        .result-section.active {
+            display: block;
+        }
+        
+        .result-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+        
+        .result-content {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background: white;
+            padding: 1rem;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--secondary);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+        }
+        
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .vulnerabilities-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🔓</span>
+                <span>SharePy Vulnerable Dashboard</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-outline" style="color: white; border-color: rgba(255,255,255,0.3);">Exploitable Version</button>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="warning-banner">
+            <div class="warning-icon">⚠️</div>
+            <div class="warning-content">
+                <h3>WARNING: Intentionally Vulnerable Application</h3>
+                <p>This is the intentionally vulnerable version of SharePy for educational and research purposes. Do not deploy this in production environments.</p>
+            </div>
+        </div>
+        
+        <div class="dashboard-title">
+            <h1>SharePy Vulnerability Exploitation</h1>
+            <p>This dashboard demonstrates 15 critical security misconfigurations in the vulnerable SharePy application. All vulnerabilities are exploitable in this version.</p>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">15</div>
+                <div class="stat-label">Vulnerabilities</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">5</div>
+                <div class="stat-label">High Severity</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">7</div>
+                <div class="stat-label">Medium Severity</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">3</div>
+                <div class="stat-label">Low Severity</div>
+            </div>
+        </div>
+        
+        <div class="vulnerabilities-grid">
+            <!-- M1: Admin Password in Clear Text -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M1</div>
+                    <h3 class="vulnerability-title">Admin Password in Clear Text</h3>
+                    <span class="vulnerability-severity severity-high">HIGH</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">Administrative credentials are stored in plain text in configuration files and source code.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">🔐 Exploit Credentials</h4>
+                        <div class="exploit-form">
+                            <div class="form-group">
+                                <label>Hardcoded Credentials Location</label>
+                                <input type="text" class="form-control" value="/backend/.env" readonly>
+                            </div>
+                            <button class="btn btn-primary" onclick="showResult('m1-result')">View Credentials</button>
+                            <div id="m1-result" class="result-section">
+                                <div class="result-title">Exposed .env File Contents</div>
+                                <div class="result-content">ADMIN_EMAIL=admin@sharepy.local
+ADMIN_PASSWORD=admin123
+JWT_SECRET=secret123
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- M2: Debug Mode Enabled -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M2</div>
+                    <h3 class="vulnerability-title">Debug Mode Enabled</h3>
+                    <span class="vulnerability-severity severity-medium">MEDIUM</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">FastAPI is running in debug mode, exposing detailed error messages and stack traces.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">🐛 Trigger Debug Error</h4>
+                        <div class="exploit-form">
+                            <div class="form-group">
+                                <label>Trigger URL</label>
+                                <input type="text" class="form-control" value="/nonexistent-endpoint" readonly>
+                            </div>
+                            <button class="btn btn-primary" onclick="triggerError()">Trigger Error</button>
+                            <div id="m2-result" class="result-section">
+                                <div class="result-title">Debug Error Response</div>
+                                <div class="result-content">Traceback (most recent call last):
+  File "/app/main.py", line 15, in &lt;module&gt;
+    from fastapi import FastAPI
+ModuleNotFoundError: No module named 'fastapi'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/local/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- M3: Directory Listing Enabled -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M3</div>
+                    <h3 class="vulnerability-title">Directory Listing Enabled</h3>
+                    <span class="vulnerability-severity severity-medium">MEDIUM</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">Nginx allows directory browsing of the uploads directory.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">📂 Browse Uploads Directory</h4>
+                        <div class="exploit-form">
+                            <div class="form-group">
+                                <label>Directory URL</label>
+                                <input type="text" class="form-control" value="/uploads/" readonly>
+                            </div>
+                            <button class="btn btn-primary" onclick="browseDirectory()">Browse Uploads</button>
+                            <div id="m3-result" class="result-section">
+                                <div class="result-title">Directory Index</div>
+                                <div class="result-content">Index of /uploads/
+
+Name         Last modified    Size
+../          2023-01-01       -
+document1.pdf 2023-01-01      1.2MB
+image1.png   2023-01-01       450KB
+secret.txt   2023-01-01       2KB
+confidential.docx 2023-01-01  3.1MB</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- M4: Sensitive Files Accessible -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M4</div>
+                    <h3 class="vulnerability-title">Sensitive Files Accessible</h3>
+                    <span class="vulnerability-severity severity-high">HIGH</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">Configuration files and version control data are exposed through the web server.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">📄 Access Sensitive Files</h4>
+                        <div class="exploit-form">
+                            <div class="form-group">
+                                <label>.env File URL</label>
+                                <input type="text" class="form-control" value="/.env" readonly>
+                            </div>
+                            <button class="btn btn-primary" onclick="accessEnvFile()">Access .env</button>
+                            <div id="m4-result" class="result-section">
+                                <div class="result-title">Environment Variables</div>
+                                <div class="result-content">DATABASE_URL=postgresql://admin:admin123@localhost:5432/sharepy
+SECRET_KEY=supersecretkey123
+DEBUG=True
+AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- M5: pgAdmin/Adminer Publicly Accessible -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M5</div>
+                    <h3 class="vulnerability-title">Adminer Publicly Accessible</h3>
+                    <span class="vulnerability-severity severity-high">HIGH</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">Database administration tool exposed without authentication.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">🗄️ Direct Database Access</h4>
+                        <div class="exploit-form">
+                            <div class="form-group">
+                                <label>Adminer URL</label>
+                                <input type="text" class="form-control" value="http://localhost:8080" readonly>
+                            </div>
+                            <button class="btn btn-primary" onclick="window.open('http://localhost:8080', '_blank')">Open Adminer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- M6: MinIO Public Bucket + Keys in Code -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M6</div>
+                    <h3 class="vulnerability-title">MinIO Public Bucket + Keys in Code</h3>
+                    <span class="vulnerability-severity severity-high">HIGH</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">Object storage credentials hardcoded and service exposed publicly.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">📦 Access MinIO Storage</h4>
+                        <div class="exploit-form">
+                            <div class="form-group">
+                                <label>MinIO Console URL</label>
+                                <input type="text" class="form-control" value="http://localhost:9001" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>Credentials</label>
+                                <input type="text" class="form-control" value="minioadmin:minioadmin" readonly>
+                            </div>
+                            <button class="btn btn-primary" onclick="window.open('http://localhost:9001', '_blank')">Access MinIO</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- M7: CORS Wildcard -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M7</div>
+                    <h3 class="vulnerability-title">CORS Wildcard</h3>
+                    <span class="vulnerability-severity severity-medium">MEDIUM</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">Cross-Origin Resource Sharing configured with wildcards.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">🌐 Exploit CORS Misconfiguration</h4>
+                        <div class="exploit-form">
+                            <div class="form-group">
+                                <label>Target Endpoint</label>
+                                <input type="text" class="form-control" value="/api/user-data" readonly>
+                            </div>
+                            <button class="btn btn-primary" onclick="exploitCORS()">Test CORS</button>
+                            <div id="m7-result" class="result-section">
+                                <div class="result-title">CORS Response Headers</div>
+                                <div class="result-content">HTTP/1.1 200 OK
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+Content-Type: application/json
+
+{
+  "user_id": "12345",
+  "email": "admin@sharepy.local",
+  "credit_card": "4111-1111-1111-1111",
+  "ssn": "123-45-6789"
+}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- M8: No Security Headers -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M8</div>
+                    <h3 class="vulnerability-title">No Security Headers</h3>
+                    <span class="vulnerability-severity severity-medium">MEDIUM</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">Missing essential HTTP security headers.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">🛡️ Check Missing Headers</h4>
+                        <div class="exploit-form">
+                            <button class="btn btn-primary" onclick="checkHeaders()">Check Headers</button>
+                            <div id="m8-result" class="result-section">
+                                <div class="result-title">Missing Security Headers</div>
+                                <div class="result-content">HTTP/1.1 200 OK
+Server: uvicorn/0.15.0
+Date: Mon, 01 Jan 2023 00:00:00 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 1234
+
+(Missing all security headers - vulnerable to XSS, clickjacking, etc.)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- M9: Insecure Cookies -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M9</div>
+                    <h3 class="vulnerability-title">Insecure Cookies</h3>
+                    <span class="vulnerability-severity severity-medium">MEDIUM</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">Session cookies missing security attributes.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">🍪 Inspect Cookie Settings</h4>
+                        <div class="exploit-form">
+                            <div class="form-group">
+                                <label>Login Endpoint</label>
+                                <input type="text" class="form-control" value="/login" readonly>
+                            </div>
+                            <button class="btn btn-primary" onclick="inspectCookie()">Inspect Cookie</button>
+                            <div id="m9-result" class="result-section">
+                                <div class="result-title">Insecure Cookie Attributes</div>
+                                <div class="result-content">Set-Cookie: session=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQHNoYXJlcHkubG9jYWwifQ.XXXXXXXX; Path=/</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- M10: Default FastAPI/Uvicorn Banner -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M10</div>
+                    <h3 class="vulnerability-title">Default Server Banner</h3>
+                    <span class="vulnerability-severity severity-low">LOW</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">Server headers reveal technology stack versions.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">🔍 Check Server Headers</h4>
+                        <div class="exploit-form">
+                            <button class="btn btn-primary" onclick="checkBanner()">Check Banner</button>
+                            <div id="m10-result" class="result-section">
+                                <div class="result-title">Exposed Server Information</div>
+                                <div class="result-content">HTTP/1.1 200 OK
+Server: uvicorn
+X-Powered-By: FastAPI 0.68.1
+X-Processed-By: Python/3.9.7</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- M11: Verbose Nginx Errors -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M11</div>
+                    <h3 class="vulnerability-title">Verbose Nginx Errors</h3>
+                    <span class="vulnerability-severity severity-low">LOW</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">Nginx configured with debug-level error logging.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">📝 Trigger Verbose Error</h4>
+                        <div class="exploit-form">
+                            <div class="form-group">
+                                <label>Error Path</label>
+                                <input type="text" class="form-control" value="/nonexistent/deep/path" readonly>
+                            </div>
+                            <button class="btn btn-primary" onclick="triggerVerboseError()">Trigger Error</button>
+                            <div id="m11-result" class="result-section">
+                                <div class="result-title">Verbose Error Output</div>
+                                <div class="result-content">500 Internal Server Error
+nginx: [error] open() "/usr/share/nginx/html/nonexistent/deep/path" failed (2: No such file or directory)
+Python path: /usr/local/lib/python3.9/site-packages
+Working directory: /app
+Config file: /etc/nginx/nginx.conf</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- M12: Internal Ports Exposed -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M12</div>
+                    <h3 class="vulnerability-title">Internal Ports Exposed</h3>
+                    <span class="vulnerability-severity severity-high">HIGH</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">Internal services exposed on public ports.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">🔌 Scan Exposed Services</h4>
+                        <div class="exploit-form">
+                            <div class="form-group">
+                                <label>Exposed Services</label>
+                                <input type="text" class="form-control" value="PostgreSQL:5432, MinIO:9000" readonly>
+                            </div>
+                            <button class="btn btn-primary" onclick="scanPorts()">Scan Ports</button>
+                            <div id="m12-result" class="result-section">
+                                <div class="result-title">Exposed Service Details</div>
+                                <div class="result-content">PORT     STATE SERVICE      VERSION
+5432/tcp open  postgresql   PostgreSQL 15.0
+| PostgreSQL 15.0 (Debian 15.0-1.pgdg110+1)
+|_SSL disabled
+9000/tcp open  minio        MinIO RELEASE.2022-01-01T00-00-00Z
+|_MinIO Console: http://localhost:9001</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- M13: chmod 777 on Uploads -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M13</div>
+                    <h3 class="vulnerability-title">World-Writable Uploads</h3>
+                    <span class="vulnerability-severity severity-medium">MEDIUM</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">Uploads directory set with world-writable permissions.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">📁 Check Directory Permissions</h4>
+                        <div class="exploit-form">
+                            <button class="btn btn-primary" onclick="checkPermissions()">Check Permissions</button>
+                            <div id="m13-result" class="result-section">
+                                <div class="result-title">Dangerous Permissions</div>
+                                <div class="result-content">Directory: /app/uploads
+Permissions: drwxrwxrwx (777)
+Owner: root
+Writable by: everyone
+Risk: Any user/process can modify/delete files</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- M14: /debug/info Endpoint -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M14</div>
+                    <h3 class="vulnerability-title">Debug Info Endpoint</h3>
+                    <span class="vulnerability-severity severity-high">HIGH</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">Debug endpoint that leaks environment information.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">🔎 Access Debug Information</h4>
+                        <div class="exploit-form">
+                            <div class="form-group">
+                                <label>Debug Endpoint</label>
+                                <input type="text" class="form-control" value="/debug/info" readonly>
+                            </div>
+                            <button class="btn btn-primary" onclick="accessDebugInfo()">Access Debug</button>
+                            <div id="m14-result" class="result-section">
+                                <div class="result-title">Leaked System Information</div>
+                                <div class="result-content">{
+  "env": {
+    "DATABASE_URL": "postgresql://admin:admin123@localhost:5432/sharepy",
+    "SECRET_KEY": "supersecretkey123",
+    "DEBUG": "True",
+    "AWS_ACCESS_KEY_ID": "AKIAIOSFODNN7EXAMPLE",
+    "AWS_SECRET_ACCESS_KEY": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  },
+  "cwd": "/app",
+  "files": [
+    ".env",
+    ".git/config",
+    "main.py",
+    "requirements.txt",
+    "Dockerfile",
+    "uploads/document1.pdf"
+  ]
+}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- M15: Weak JWT Secret -->
+            <div class="vulnerability-card">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-id">M15</div>
+                    <h3 class="vulnerability-title">Weak JWT Secret</h3>
+                    <span class="vulnerability-severity severity-high">HIGH</span>
+                </div>
+                <div class="vulnerability-body">
+                    <p class="vulnerability-description">Weak secret used for JWT token signing.</p>
+                    <div class="exploit-section">
+                        <h4 class="exploit-title">🔑 Crack JWT Token</h4>
+                        <div class="exploit-form">
+                            <div class="form-group">
+                                <label>Weak Secrets List</label>
+                                <input type="text" class="form-control" value="secret, secret123, changeme, admin" readonly>
+                            </div>
+                            <button class="btn btn-primary" onclick="bruteForceJWT()">Crack JWT</button>
+                            <div id="m15-result" class="result-section">
+                                <div class="result-title">JWT Cracking Success</div>
+                                <div class="result-content">Success! Secret found: "secret123"
+Forged admin token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQHNoYXJlcHkubG9jYWwiLCJyb2xlIjoiYWRtaW4ifQ.XXXXXXXX
+Token can now be used to access admin resources!</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>SharePy Vulnerable Dashboard | Educational Purposes Only</p>
+        <p>This interface demonstrates security vulnerabilities for educational and research purposes.</p>
+    </footer>
+    
+    <script>
+        // Toggle result sections
+        function showResult(id) {
+            const resultSection = document.getElementById(id);
+            resultSection.classList.toggle('active');
+        }
+        
+        // Simulate triggering errors
+        function triggerError() {
+            showResult('m2-result');
+        }
+        
+        // Simulate directory browsing
+        function browseDirectory() {
+            showResult('m3-result');
+        }
+        
+        // Simulate accessing .env file
+        function accessEnvFile() {
+            showResult('m4-result');
+        }
+        
+        // Simulate CORS exploitation
+        function exploitCORS() {
+            showResult('m7-result');
+        }
+        
+        // Simulate checking headers
+        function checkHeaders() {
+            showResult('m8-result');
+        }
+        
+        // Simulate cookie inspection
+        function inspectCookie() {
+            showResult('m9-result');
+        }
+        
+        // Simulate checking server banner
+        function checkBanner() {
+            showResult('m10-result');
+        }
+        
+        // Simulate triggering verbose error
+        function triggerVerboseError() {
+            showResult('m11-result');
+        }
+        
+        // Simulate port scanning
+        function scanPorts() {
+            showResult('m12-result');
+        }
+        
+        // Simulate checking permissions
+        function checkPermissions() {
+            showResult('m13-result');
+        }
+        
+        // Simulate accessing debug info
+        function accessDebugInfo() {
+            showResult('m14-result');
+        }
+        
+        // Simulate JWT brute forcing
+        function bruteForceJWT() {
+            showResult('m15-result');
+        }
+    </script>
+</body>
+</html>

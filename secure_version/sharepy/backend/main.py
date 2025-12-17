@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Response
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from minio import Minio
 import os
@@ -43,15 +44,35 @@ app.add_middleware(
 )
 
 # ✅ FIX M6: MinIO credentials from environment only
-minio_client = Minio(
-    os.getenv("MINIO_ENDPOINT"),
-    access_key=os.getenv("MINIO_ACCESS_KEY"),
-    secret_key=os.getenv("MINIO_SECRET_KEY"),
-    secure=True  # Use HTTPS
-)
+minio_endpoint = os.getenv("MINIO_ENDPOINT")
+if minio_endpoint:
+    minio_client = Minio(
+        minio_endpoint,
+        access_key=os.getenv("MINIO_ACCESS_KEY"),
+        secret_key=os.getenv("MINIO_SECRET_KEY"),
+        secure=True  # Use HTTPS
+    )
+else:
+    minio_client = None  # MinIO not configured
 
 # ✅ FIX M14: Remove debug endpoints entirely
 # @app.get("/debug/info") - REMOVED!
+
+# Serve the subtle secure dashboard
+@app.get("/", response_class=HTMLResponse)
+async def secure_dashboard():
+    try:
+        with open("templates/subtle_dashboard.html", "r") as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content, status_code=200)
+    except FileNotFoundError:
+        try:
+            # Fallback to original dashboard
+            with open("templates/dashboard.html", "r") as f:
+                html_content = f.read()
+            return HTMLResponse(content=html_content, status_code=200)
+        except FileNotFoundError:
+            return HTMLResponse(content="Dashboard not found", status_code=404)
 
 # ✅ FIX M9: Secure cookies
 @app.post("/login")
@@ -96,3 +117,13 @@ def create_share_link(file_id: str):
 @app.get("/admin")
 def admin_panel():
     return {"message": "Admin panel"}
+
+# Endpoint to demonstrate secure credential handling
+@app.get("/secure-credentials")
+def get_secure_credentials_info():
+    # Show that credentials are properly secured
+    return {
+        "message": "Credentials are loaded from environment variables, not hardcoded",
+        "ADMIN_EMAIL": "Loaded from environment" if os.getenv("ADMIN_EMAIL") else "Not set",
+        "JWT_SECRET_LENGTH": len(os.getenv("JWT_SECRET", "")) if os.getenv("JWT_SECRET") else 0
+    }
