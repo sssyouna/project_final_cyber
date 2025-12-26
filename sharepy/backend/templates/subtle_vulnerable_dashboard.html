@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Westfield Elementary - Student Portal</title>
+    <style>
+        :root {
+            --primary: #dc2626;
+            --secondary: #4b5563;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --light: #f9fafb;
+            --dark: #1f2937;
+            --border: #e5e7eb;
+            --school-red: #dc2626;
+            --school-yellow: #f59e0b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #fef2f2;
+            color: #374151;
+            line-height: 1.6;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--school-red), #991b1b);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .logo-icon {
+            font-size: 2rem;
+        }
+        
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+        
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.3s;
+        }
+        
+        nav ul li a:hover {
+            opacity: 0.8;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .hero {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            margin-bottom: 2rem;
+            border: 1px solid #fecaca;
+        }
+        
+        .hero h1 {
+            color: var(--school-red);
+            margin-bottom: 1rem;
+        }
+        
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--secondary);
+            max-width: 800px;
+            margin: 0 auto 1.5rem;
+        }
+        
+        .announcement-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 1.5rem;
+            border: 1px solid #fecaca;
+        }
+        
+        .announcement-card h3 {
+            color: var(--school-red);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .announcement-date {
+            font-size: 0.9rem;
+            color: var(--secondary);
+            margin-bottom: 1rem;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .feature-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            transition: transform 0.3s ease;
+            border: 1px solid #fecaca;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--school-red);
+        }
+        
+        .feature-card h3 {
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+        
+        .login-section {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            max-width: 500px;
+            margin: 2rem auto;
+            border: 1px solid #fecaca;
+        }
+        
+        .login-section h2 {
+            color: var(--school-red);
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--school-red);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #991b1b;
+        }
+        
+        .vulnerability-highlight {
+            background: #fff7f7;
+            border-left: 4px solid var(--danger);
+            padding: 1rem;
+            border-radius: 0 6px 6px 0;
+            margin: 2rem 0;
+            border: 1px solid #fecaca;
+        }
+        
+        .vulnerability-highlight h3 {
+            color: #991b1b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .exploit-section {
+            background: #fff7f7;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        
+        .exploit-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--school-red);
+        }
+        
+        .token-display {
+            background: white;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 1rem 0;
+            border: 1px solid #fecaca;
+        }
+        
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
+        
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            text-align: left;
+        }
+        
+        .footer-section h3 {
+            margin-bottom: 1rem;
+            color: var(--school-yellow);
+        }
+        
+        .footer-links {
+            list-style: none;
+        }
+        
+        .footer-links li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .footer-links a {
+            color: #d1d5db;
+            text-decoration: none;
+        }
+        
+        .footer-links a:hover {
+            color: white;
+        }
+        
+        .copyright {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #4b5563;
+            color: #9ca3af;
+        }
+        
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            nav ul {
+                gap: 1rem;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🏫</span>
+                <span>Westfield Elementary</span>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#">Home</a></li>
+                    <li><a href="#">About</a></li>
+                    <li><a href="#">Academics</a></li>
+                    <li><a href="#">Events</a></li>
+                    <li><a href="#">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="hero">
+            <h1>Welcome to Westfield Elementary Student Portal</h1>
+            <p>Your gateway to student resources, grades, assignments, and school announcements. Log in to access your personalized dashboard.</p>
+        </div>
+        
+        <div class="announcement-card">
+            <h3>📢 Important School Announcement</h3>
+            <div class="announcement-date">Posted: December 15, 2025</div>
+            <p>Winter Break begins December 20th. All students must complete their final assignments by Friday, December 19th. Have a wonderful holiday season!</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📚</div>
+                <h3>Online Classes</h3>
+                <p>Access your virtual classrooms and educational resources anytime, anywhere.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Grade Reports</h3>
+                <p>View your academic progress and performance with detailed grade reports.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📅</div>
+                <h3>School Calendar</h3>
+                <p>Stay updated with important dates, events, and school activities.</p>
+            </div>
+        </div>
+        
+        <div class="login-section">
+            <h2>Student Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Student Email</label>
+                    <input type="email" id="email" class="form-control" placeholder="student@westfield.edu" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
+                </div>
+                
+                <button type="submit" class="btn">Sign In</button>
+            </form>
+        </div>
+        
+        <!-- M15 Vulnerability Highlight - Clearly visible for attackers -->
+        <div class="vulnerability-highlight">
+            <h3>⚠️ System Security Notice</h3>
+            <p>Our portal uses JWT tokens for authentication. For troubleshooting purposes, technical staff can verify token validity below:</p>
+            
+            <div class="exploit-section">
+                <h4 class="exploit-title">Token Verification Tool</h4>
+                <p>Enter a JWT token to verify its authenticity:</p>
+                
+                <div class="form-group">
+                    <label for="jwtToken">JWT Token</label>
+                    <input type="text" id="jwtToken" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                </div>
+                
+                <button id="verifyToken" class="btn" style="background: #991b1b;">Verify Token</button>
+                
+                <div id="tokenResult" class="token-display" style="display: none; margin-top: 1rem;">
+                    <!-- Token verification results will appear here -->
+                </div>
+                
+                <div style="margin-top: 1rem; font-size: 0.9rem; color: #991b1b;">
+                    <strong>Developer Note:</strong> Our system uses a weak JWT secret (<code>secret123</code>) for token signing.<br>
+                    <em>Technical staff can attempt to forge admin tokens using this weak secret.</em>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Westfield Elementary</h3>
+                <p>Providing quality education since 1985. Committed to excellence in elementary education.</p>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul class="footer-links">
+                    <li><a href="#">Academic Calendar</a></li>
+                    <li><a href="#">School Policies</a></li>
+                    <li><a href="#">Parent Resources</a></li>
+                    <li><a href="#">Staff Directory</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Contact Us</h3>
+                <ul class="footer-links">
+                    <li>📞 (555) 123-4567</li>
+                    <li>✉️ office@westfield.edu</li>
+                    <li>📍 123 Education Lane, Learning City</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="copyright">
+            <p>&copy; 2025 Westfield Elementary School. All rights reserved.</p>
+        </div>
+    </footer>
+    
+    <script>
+        // Handle login form submission
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            // In a real app, this would send credentials to the server
+            alert(`Login attempted for ${email}. In a real application, this would authenticate with the server.`);
+        });
+        
+        // Handle JWT token verification
+        document.getElementById('verifyToken').addEventListener('click', function() {
+            const tokenInput = document.getElementById('jwtToken');
+            const tokenResult = document.getElementById('tokenResult');
+            
+            if (!tokenInput.value) {
+                alert('Please enter a JWT token to verify.');
+                return;
+            }
+            
+            // Display the token for inspection
+            tokenResult.style.display = 'block';
+            tokenResult.innerHTML = `<strong>Token Analysis:</strong><br>
+            Token: ${tokenInput.value}<br><br>
+            <strong>Security Alert:</strong> This token was signed with a weak secret (<code>secret123</code>).<br>
+            <em>Attackers can forge admin tokens by cracking this weak secret.</em><br><br>
+            <strong>Exploitation Hint:</strong> Try using a JWT cracking tool with common weak secrets.`;
+        });
+    </script>
+</body>
+</html>
