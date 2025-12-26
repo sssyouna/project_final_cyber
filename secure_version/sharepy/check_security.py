@@ -5,7 +5,6 @@ dotenv.load_dotenv()
 Automated security checker for SharePy
 Validates all 15 security fixes
 """
-
 import requests
 import subprocess
 import os
@@ -323,6 +322,10 @@ class SecurityChecker:
         jwt_secret = os.getenv("JWT_SECRET", "")
         is_strong = len(jwt_secret) >= 32 and jwt_secret.lower() not in weak_secrets
         
+        self.check(
+            "M15: Strong JWT Secret",
+            is_strong,
+            "JWT secret is strong and not hardcoded"
         )
     
     def print_summary(self):
