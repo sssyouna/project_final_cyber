@@ -377,6 +377,29 @@
                 
                 <button type="submit" class="btn">Sign In</button>
             </form>
+            
+            <!-- JavaScript Session Cookie Access Test (Simulates XSS vulnerability) -->
+            <div class="exploit-section" style="margin-top: 1.5rem;">
+                <h4 class="exploit-title">🔐 Session Cookie Access Test</h4>
+                <p>Test JavaScript access to session cookies (demonstrates HttpOnly vulnerability):</p>
+                
+                <div class="form-group">
+                    <label for="jsInput">JavaScript Code to Execute</label>
+                    <input type="text" id="jsInput" class="form-control" placeholder="document.cookie or <script>alert(document.cookie)</script>" style="font-family: monospace;">
+                </div>
+                
+                <button id="executeJS" class="btn" style="background: #991b1b;">Execute JavaScript</button>
+                
+                <button id="showCookies" class="btn" style="background: #f59e0b; margin-top: 0.5rem;">Show Session Cookies</button>
+                
+                <div id="jsResult" class="token-display" style="display: none; margin-top: 1rem;">
+                    <!-- JavaScript execution results will appear here -->
+                </div>
+            </div>
+            
+            <div style="margin-top: 1rem; text-align: center;">
+                <button type="button" class="btn" style="background: #991b1b;" id="debugErrorBtn">Debug Error (For Testing)</button>
+            </div>
         </div>
         
         <!-- M15 Vulnerability Highlight - Clearly visible for attackers -->
@@ -447,8 +470,35 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             
-            // In a real app, this would send credentials to the server
-            alert(`Login attempted for ${email}. In a real application, this would authenticate with the server.`);
+            // Send login request to the backend
+            fetch('/login?' + new URLSearchParams({email: email, password: password}), {
+                method: 'POST',
+                credentials: 'same-origin'
+            })
+            .then(async response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Login failed');
+                }
+            })
+            .then(data => {
+                if (data.token) {
+                    alert('Login successful! Token received: ' + data.token.substring(0, 30) + '...');
+                    // Store token in localStorage for demonstration purposes
+                    localStorage.setItem('authToken', data.token);
+                    // The session cookie is also set by the server and accessible via document.cookie
+                    // Redirect to welcome page after successful login
+                    window.location.href = '/welcome';
+                } else {
+                    alert('Login failed: Invalid credentials');
+                }
+            })
+            .catch(error => {
+                console.error('Login error:', error);
+                alert('Login error: Network error or server unavailable');
+            });
         });
         
         // Handle JWT token verification
@@ -468,6 +518,104 @@
             <strong>Security Alert:</strong> This token was signed with a weak secret (<code>secret123</code>).<br>
             <em>Attackers can forge admin tokens by cracking this weak secret.</em><br><br>
             <strong>Exploitation Hint:</strong> Try using a JWT cracking tool with common weak secrets.`;
+        });
+        
+        // Handle debug error button
+        document.getElementById('debugErrorBtn').addEventListener('click', function() {
+            // Call the debug error endpoint which will generate a full stack trace
+            fetch('/debug-error')
+            .then(response => {
+                // Get the response text to see the full error details
+                return response.text();
+            })
+            .then(errorText => {
+                // Display the full error details (including stack trace) to the user
+                alert('Internal server error with full details exposed:\n\n' + errorText + '\n\nThis demonstrates the vulnerability of showing full error details to attackers.');
+            })
+            .catch(error => {
+                console.error('Network error:', error);
+                alert('Network error occurred: ' + error.message);
+            });
+        });
+        
+        // Handle JavaScript execution for session cookie access test
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/\"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+        
+        document.getElementById('executeJS').addEventListener('click', function() {
+            let jsInput = document.getElementById('jsInput').value;
+            const jsResult = document.getElementById('jsResult');
+            
+            if (!jsInput) {
+                alert('Please enter JavaScript code to execute.');
+                return;
+            }
+            
+            try {
+                // Check if the input contains script tags and extract the JavaScript code if it does
+                let jsCode = jsInput;
+                const scriptTagRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+                const matches = jsInput.match(scriptTagRegex);
+                
+                if (matches) {
+                    // Extract JavaScript code from script tags
+                    jsCode = '';
+                    matches.forEach(function(match) {
+                        const extracted = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '');
+                        jsCode += extracted + ';\n';
+                    });
+                }
+                
+                // Evaluate the JavaScript code (either from script tags or directly)
+                const result = eval(jsCode);
+                
+                // Display the result, escaping HTML to prevent issues
+                jsResult.style.display = 'block';
+                jsResult.innerHTML = '<strong>Executed Code:</strong><br>' +
+                    '<code>' + escapeHtml(jsInput) + '</code><br><br>' +
+                    '<strong>Extracted JS:</strong><br>' +
+                    '<code>' + escapeHtml(jsCode) + '</code><br><br>' +
+                    '<strong>Result:</strong><br>' +
+                    '<code>' + escapeHtml(String(result)) + '</code><br><br>' +
+                    '<strong>Security Analysis:</strong> The session cookie is accessible via JavaScript because the HttpOnly flag is not set in the cookie configuration.<br>' +
+                    '<em>This demonstrates the insecure session cookie vulnerability (M9).</em>';
+            } catch (e) {
+                jsResult.style.display = 'block';
+                jsResult.innerHTML = '<strong>Executed Code:</strong><br>' +
+                    '<code>' + escapeHtml(jsInput) + '</code><br><br>' +
+                    '<strong>Error:</strong><br>' +
+                    '<code>' + escapeHtml(e.message) + '</code><br><br>' +
+                    '<strong>Security Analysis:</strong> Even with errors, JavaScript can access cookies when HttpOnly is not set.<br>' +
+                    '<em>This demonstrates the insecure session cookie vulnerability (M9).</em>';
+            }
+        });
+        
+        // Handle showing session cookies directly
+        document.getElementById('showCookies').addEventListener('click', function() {
+            const jsResult = document.getElementById('jsResult');
+            
+            // Get all cookies from the browser
+            const cookies = document.cookie;
+            
+            // Display the cookies
+            jsResult.style.display = 'block';
+            if (cookies) {
+                jsResult.innerHTML = '<strong>Session Cookies Found:</strong><br>' +
+                    '<code>' + escapeHtml(cookies) + '</code><br><br>' +
+                    '<strong>Security Issue:</strong> The session cookie is accessible via JavaScript because the HttpOnly flag is not set.<br>' +
+                    '<em>This demonstrates the insecure session cookie vulnerability (M9). An attacker could steal this cookie with malicious JavaScript.</em>';
+            } else {
+                jsResult.innerHTML = '<strong>Session Cookies Found:</strong><br>' +
+                    '<em>No cookies found in this browser session</em><br><br>' +
+                    '<strong>Security Note:</strong> If you have logged in, your session cookie would be accessible here due to missing HttpOnly flag.<br>' +
+                    '<em>This demonstrates the insecure session cookie vulnerability (M9).</em>';
+            }
         });
     </script>
 </body>

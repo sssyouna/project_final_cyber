@@ -12,6 +12,9 @@ services:
       - "5432:5432"  # M12: EXPOSED!
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres_config/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./postgres_config/pg_hba.conf:/etc/postgresql/pg_hba.conf
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
 
   # M5 & M12: Adminer exposed without auth
   adminer:
