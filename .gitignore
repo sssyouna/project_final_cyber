@@ -1,0 +1,75 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.db-journal
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Compiled files
+*.pyc
+*.pyo
+*.pyd
+*.compiled
+
+# Backup and temporary files
+*~
+*.tmp
+*.temp
+
+# Ignore user uploads directory content (but allow the directory itself)
+vulnerable_version/sharepy/backend/uploads/*
+
+# Ignore malicious test files
+vulnerable_version/sharepy/malicious_*
+vulnerable_version/sharepy/shell.php
+vulnerable_version/sharepy/*_test.php
+vulnerable_version/sharepy/*_exec.php
+vulnerable_version/sharepy/test*.php
+vulnerable_version/sharepy/test*.txt
+vulnerable_version/sharepy/final_test.txt
+vulnerable_version/sharepy/merged_test.txt
+vulnerable_version/sharepy/m13_test.php
+vulnerable_version/sharepy/a_*.php
