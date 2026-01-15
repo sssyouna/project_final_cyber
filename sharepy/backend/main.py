@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Response
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from minio import Minio
 import os
@@ -14,6 +15,9 @@ JWT_SECRET = "secret123"
 
 # M2: Debug mode enabled
 app = FastAPI(debug=True)
+
+# Mount static files directory
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # M7: CORS wildcard
 app.add_middleware(
