@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Response
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from minio import Minio
 import os
@@ -25,6 +26,9 @@ app = FastAPI(
     description="File sharing application with security vulnerabilities",
     version="1.0.0"
 )
+
+# Mount static files directory
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # M10: Server headers will include framework information by default
 @app.middleware("http")
