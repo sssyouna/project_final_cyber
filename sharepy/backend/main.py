@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Response
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from minio import Minio
 import os
@@ -23,6 +24,9 @@ app = FastAPI(
     redoc_url=None,  # Disable ReDoc in production
     openapi_url=None  # Disable OpenAPI schema
 )
+
+# Mount static files directory
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ✅ FIX M15: Strong JWT secret from environment
 JWT_SECRET = os.getenv("JWT_SECRET", secrets.token_urlsafe(64))
