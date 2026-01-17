@@ -319,6 +319,130 @@ footer {
     margin-top: 3rem;
 }
 
+.vulnerability-body {
+    padding: 1.25rem;
+}
+
+.vulnerability-description {
+    color: var(--secondary);
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+.exploit-section {
+    background: #fff7f7;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.exploit-title {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.exploit-form {
+    display: grid;
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.form-control {
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: border-color 0.3s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #991b1b;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--secondary);
+}
+
+.btn-outline:hover {
+    background: var(--light);
+}
+
+.result-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 6px;
+    background: #fff7f7;
+    border-left: 4px solid var(--danger);
+    display: none;
+}
+
+.result-section.active {
+    display: block;
+}
+
+.result-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--dark);
+}
+
+.result-content {
+    font-family: monospace;
+    white-space: pre-wrap;
+    background: white;
+    padding: 1rem;
+    border-radius: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-size: 0.9rem;
+}
+
+footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--secondary);
+    font-size: 0.9rem;
+    border-top: 1px solid var(--border);
+    margin-top: 3rem;
+}
+
 @media (max-width: 768px) {
     .header-content {
         flex-direction: column;

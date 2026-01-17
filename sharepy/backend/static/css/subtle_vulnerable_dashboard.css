@@ -288,6 +288,16 @@ footer {
     color: #9ca3af;
 }
 
+.btn-danger {
+    background: #991b1b !important;
+}
+
+.security-note {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #991b1b;
+}
+
 @media (max-width: 768px) {
     .header-content {
         flex-direction: column;

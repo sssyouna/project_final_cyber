@@ -88,13 +88,13 @@
                     <input type="text" id="jwtToken" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
                 </div>
                 
-                <button id="verifyToken" class="btn" style="background: #991b1b;">Verify Token</button>
+                <button id="verifyToken" class="btn btn-danger">Verify Token</button>
                 
                 <div id="tokenResult" class="token-display" style="display: none; margin-top: 1rem;">
                     <!-- Token verification results will appear here -->
                 </div>
                 
-                <div style="margin-top: 1rem; font-size: 0.9rem; color: #991b1b;">
+                <div class="security-note">
                     <strong>Developer Note:</strong> Our system uses a weak JWT secret (<code>secret123</code>) for token signing.<br>
                     <em>Technical staff can attempt to forge admin tokens using this weak secret.</em>
                 </div>
