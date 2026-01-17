@@ -288,6 +288,11 @@ footer {
     color: #9ca3af;
 }
 
+.token-display-hidden {
+    display: none;
+    margin-top: 1rem;
+}
+
 .btn-danger {
     background: #991b1b !important;
 }

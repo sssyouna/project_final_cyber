@@ -443,6 +443,11 @@ footer {
     margin-top: 3rem;
 }
 
+.header-btn {
+    color: white !important;
+    border-color: rgba(255,255,255,0.3) !important;
+}
+
 @media (max-width: 768px) {
     .header-content {
         flex-direction: column;
