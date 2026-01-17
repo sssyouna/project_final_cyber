@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Westfield Elementary - Student Portal</title>
+    <link rel="stylesheet" href="/static/css/subtle_vulnerable_dashboard.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🏫</span>
+                <span>Westfield Elementary</span>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#">Home</a></li>
+                    <li><a href="#">About</a></li>
+                    <li><a href="#">Academics</a></li>
+                    <li><a href="#">Events</a></li>
+                    <li><a href="#">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="hero">
+            <h1>Welcome to Westfield Elementary Student Portal</h1>
+            <p>Your gateway to student resources, grades, assignments, and school announcements. Log in to access your personalized dashboard.</p>
+        </div>
+        
+        <div class="announcement-card">
+            <h3>📢 Important School Announcement</h3>
+            <div class="announcement-date">Posted: December 15, 2025</div>
+            <p>Winter Break begins December 20th. All students must complete their final assignments by Friday, December 19th. Have a wonderful holiday season!</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📚</div>
+                <h3>Online Classes</h3>
+                <p>Access your virtual classrooms and educational resources anytime, anywhere.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Grade Reports</h3>
+                <p>View your academic progress and performance with detailed grade reports.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📅</div>
+                <h3>School Calendar</h3>
+                <p>Stay updated with important dates, events, and school activities.</p>
+            </div>
+        </div>
+        
+        <div class="login-section">
+            <h2>Student Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Student Email</label>
+                    <input type="email" id="email" class="form-control" placeholder="student@westfield.edu" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
+                </div>
+                
+                <button type="submit" class="btn">Sign In</button>
+            </form>
+        </div>
+        
+        <!-- M15 Vulnerability Highlight - Clearly visible for attackers -->
+        <div class="vulnerability-highlight">
+            <h3>⚠️ System Security Notice</h3>
+            <p>Our portal uses JWT tokens for authentication. For troubleshooting purposes, technical staff can verify token validity below:</p>
+            
+            <div class="exploit-section">
+                <h4 class="exploit-title">Token Verification Tool</h4>
+                <p>Enter a JWT token to verify its authenticity:</p>
+                
+                <div class="form-group">
+                    <label for="jwtToken">JWT Token</label>
+                    <input type="text" id="jwtToken" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                </div>
+                
+                <button id="verifyToken" class="btn btn-danger">Verify Token</button>
+                
+                <div id="tokenResult" class="token-display" style="display: none; margin-top: 1rem;">
+                    <!-- Token verification results will appear here -->
+                </div>
+                
+                <div class="security-note">
+                    <strong>Developer Note:</strong> Our system uses a weak JWT secret (<code>secret123</code>) for token signing.<br>
+                    <em>Technical staff can attempt to forge admin tokens using this weak secret.</em>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Westfield Elementary</h3>
+                <p>Providing quality education since 1985. Committed to excellence in elementary education.</p>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul class="footer-links">
+                    <li><a href="#">Academic Calendar</a></li>
+                    <li><a href="#">School Policies</a></li>
+                    <li><a href="#">Parent Resources</a></li>
+                    <li><a href="#">Staff Directory</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Contact Us</h3>
+                <ul class="footer-links">
+                    <li>📞 (555) 123-4567</li>
+                    <li>✉️ office@westfield.edu</li>
+                    <li>📍 123 Education Lane, Learning City</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="copyright">
+            <p>&copy; 2025 Westfield Elementary School. All rights reserved.</p>
+        </div>
+    </footer>
+    
+    <script src="/static/js/subtle_vulnerable_dashboard.js"></script>
+</body>
+</html>
