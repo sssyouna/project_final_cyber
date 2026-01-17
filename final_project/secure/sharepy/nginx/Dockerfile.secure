@@ -1,5 +1,0 @@
-FROM nginx:alpine
-
-COPY nginx.conf.secure /etc/nginx/nginx.conf
-
-# ✅ Hardened configuration will be used
